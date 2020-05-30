@@ -43,7 +43,7 @@ PLAYER OBJECT DEFINITION(assuming all data must be stored in Player Objects rath
 """
 import base64
 import requests
-import csv
+import json
 
 class ProcessedPlayer(object):
     name = ""
@@ -62,26 +62,20 @@ def send_request():
 
     try:
         response = requests.get(
-            url= 'https://api.mysportsfeeds.com/v2.1/pull/nfl/2019-regular/date/20191118/player_gamelogs.csv' ,
-            params={
+            url = ' https://api.mysportsfeeds.com/v2.1/pull/nfl/2019-regular/week/1/player_gamelogs.json' ,
+            params = {
                 "fordate": "20161121"
             },
-            headers={
+            headers = {
                 "Authorization": "Basic " + base64.b64encode('{}:{}'.format('cc0ccd01-3831-448a-a562-fd6585','MYSPORTSFEEDS').encode('utf-8')).decode('ascii')
             }
         )
-        print('Response HTTP Status Code: {status_code}'.format(
-            status_code=response.status_code))
-        print('Response HTTP Response Body: {content}'.format(
-            content=response.content))
-        File = open('test.txt', 'w')
-        with File:
-            writer = csv.writer(File)
-            writer.writerow(response.content)
+
+        with open('test.txt', 'w', encoding = 'utf-8') as File:
+            json.dump(format(response.content), File)
+
     except requests.exceptions.RequestException:
         print('HTTP Request failed')
-
-send_request()
 
 """
 find the player with the max projected points
@@ -100,11 +94,13 @@ def findMax(playerList, pos):
             print('3')
             continue
 
-        #if current player projection is greater than tmp projection, override tmp
+        #if current player projection is greater than tmp projection, overwrite tmp
         if x.proj > tmp.proj:
             tmp = x
             print('1')
 
     return tmp
 
-print('4')
+send_request()
+
+print(4)
