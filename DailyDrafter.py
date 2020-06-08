@@ -1,8 +1,11 @@
+#TODO: ADJUST TRIMMING, MULTIPLE OF THE SAME POSITION IN LINEUP
+#TODO: CHANGE PROCESS OF LOWERING LINEUP TO FIT IN SALARY CAP
+#TODO: LOOK AT USING UPDATELINE FUNCTION IN CREATELINEUP
+
 """
 pull in raw player data
     pull down data from API
     load data into player objects(would like to manipulate data before loading into player array if possible)
-
 
 calculate player projected points
     Let X be games played where X = 0 is most recent, 0 <= X <= 50
@@ -27,10 +30,29 @@ trimPool(players, position, salary1)
         remove all players.salary >= salary1
 
 lower lineup to fit in salary cap
-    while (lineup.totalSal > maxSal)
-        createSecondLineup(players)
-        compare secondlineup players with first lineup player
-            replace player in first lineup with min(player0.proj - player1.proj)
+    lineup2 = createLineup(players)
+    while (lineup1.totalSal > maxSal)
+        holder[] findMinDif(lineup1, lineup2)
+        swap(holder[0], holder[1], lineup1, lineup2)
+        updateLine(lineup2, holder[0].pos)
+
+findMinDif(lineup1, lineup2)
+    for player1 in Lineup1
+	    for player2 in Lineup2
+		    if player1.pos = player2.pos && (player1.proj - player2.proj) < holder.proj
+		        holder1 = player1
+			    holder2 = player2
+
+swap(player1, player2, lineup1, lineup2)
+    lineup1.remove(player1)
+    lineup1 += player2
+    lineup2.remove(player2)
+
+updateLine(lineup2, position)
+    choice = findMax(players, position)
+        lineup += choice
+        players.remove(choice)
+        trimPool(players, position, choice.salary)
 
 PLAYER OBJECT DEFINITION(assuming all data must be stored in Player Objects rather than raw database)
     Name: Player's name
@@ -40,6 +62,12 @@ PLAYER OBJECT DEFINITION(assuming all data must be stored in Player Objects rath
     RYards: Array of RUSHING yards over past X number of games
     RecYards: Array of RECEIVING yards over past X number of games
     PYards: Array of PASSING yards over past X number of games(only for QB, 0 for others)
+
+PROCESSEDPLAYER OBJECT DEFINITION
+    Name: Player's Name
+    Pos: Player Position
+    Proj: Projected Points
+    Sal: Player's Salary
 """
 import base64
 import requests
