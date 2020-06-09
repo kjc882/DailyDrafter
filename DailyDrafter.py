@@ -1,5 +1,4 @@
 #TODO: ADJUST TRIMMING, MULTIPLE OF THE SAME POSITION IN LINEUP
-#TODO: CHANGE PROCESS OF LOWERING LINEUP TO FIT IN SALARY CAP
 #TODO: LOOK AT USING UPDATELINE FUNCTION IN CREATELINEUP
 
 """
@@ -104,6 +103,22 @@ def send_request():
 
     except requests.exceptions.RequestException:
         print('HTTP Request failed')
+
+"""
+calculate player projected point
+Create weighted average of yards per game and multiply by points per yard
+    Points per yard are created as Constants
+players: list of every player objects
+"""
+def calcProjection(players):
+    for player in players:
+        for game in player.games:
+            count += 1
+            tmpCount += 1
+        for game in player.games:
+            total = (1 + (tmpCount/200)) * (game.passingyards * PPPY + game.rushingyards * PPRY + game.receivingyards * PPRecY + game.kickingyards * PPKY + game.td * PPTD + game.receptions * PPR)
+            tmpCount -= 2
+        player.proj = (total/count)
 
 """
 find the player with the max projected points
