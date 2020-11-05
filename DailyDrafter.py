@@ -1,39 +1,65 @@
-#TODO: ADJUST TRIMMING, MULTIPLE OF THE SAME POSITION IN LINEUP
-#TODO: LOOK AT USING UPDATELINE FUNCTION IN CREATELINEUP
+#DraftKings Daily Drafting Application
+#Authored by Kieran Chang
 
 """
-pull in raw player data
-    pull down data from API
-    load data into player objects(would like to manipulate data before loading into player array if possible)
+HIGH LEVEL
 
-calculate player projected points
+Pull in Raw player data from API
+Process data to determine each player's projected scores
+Create lineup of players with highest projected for necessary positions
+    NOTE: Ignore Salary Cap
+While Lineup total Salary > Salary Cap, Update Lineup with "next best" for a single position
+    "Next Best"  determined by having smallest projection gap among ALL positions while still having lower salary
+Output final lineup
+"""
+"""
+MEDIUM LEVEL
+
+playerHolder[] = playerData()
+freeAgents = calcProj(playerHolder[])
+lineup = createLineup(freeAgents)
+for all players in lineup
+    trimPool(lineup.player.position, lineup.player.salary)
+if total lineup.salary > salary cap
+    lineup1 = createLineup(freeAgents)
+else
+    print lineUp
+    END
+while total lineup.salary > salary cap
+    holder[] findMinDif(lineup, lineup1)
+    swap(holder[0], holder[1], lineup1, lineup2)
+    updateLine(lineup1, holder[0].pos)
+print lineup
+END
+"""
+""" 
+FUNCTIONS
+
+sendRequest()
+    pull down data from API
+
+calcProj(playerHolder)
     Let X be games played where X = 0 is most recent, 0 <= X <= 50
     for all players
         for all player.yards[X]
-            (((1.25 - (X * .01)) * player.yards[X] * (pt / yard)) * defense.yardsAllowed
+            player.proj += ((1 + (count(player.yards) * .005) - (X * .01)) * player.yards[X] * (pt / yard))
+        player.proj = player.proj / count(player.yards)
+    return all players
 
-createLineup(players)
+createLineup(freeAgents)
     for all positions
         choice = findMax(players, position)
         lineup += choice
         players.remove(choice)
-        trimPool(players, position, choice.salary)
 
 findmax(players, position)
     for all players with given position
         find max projected points
     return player index
 
-trimPool(players, position, salary1)
-    for all players with given position
-        remove all players.salary >= salary1
-
-lower lineup to fit in salary cap
-    lineup2 = createLineup(players)
-    while (lineup1.totalSal > maxSal)
-        holder[] findMinDif(lineup1, lineup2)
-        swap(holder[0], holder[1], lineup1, lineup2)
-        updateLine(lineup2, holder[0].pos)
+trimPool(position, salary1)
+    for all players with given position in freeAgents
+        remove all freeAgents where player.salary >= salary1
 
 findMinDif(lineup1, lineup2)
     for player1 in Lineup1
@@ -47,11 +73,16 @@ swap(player1, player2, lineup1, lineup2)
     lineup1 += player2
     lineup2.remove(player2)
 
-updateLine(lineup2, position)
-    choice = findMax(players, position)
+updateLine(lineup, position)
+    choice = findMax(freeAgents, position)
         lineup += choice
-        players.remove(choice)
-        trimPool(players, position, choice.salary)
+        freeAgents.remove(choice)
+        trimPool(freeAgents, position, choice.salary)
+"""
+"""
+OBJECT DEFINITION
+
+CURRENTLY NOT IN USE
 
 PLAYER OBJECT DEFINITION(assuming all data must be stored in Player Objects rather than raw database)
     Name: Player's name
@@ -72,17 +103,19 @@ import base64
 import requests
 import json
 
-class ProcessedPlayer(object):
-    name = ""
-    pos = ""
-    proj = 0
-    sal = 0
+# class ProcessedPlayer(object):
+#     name = ""
+#     pos = ""
+#     proj = 0
+#     sal = 0
+#
+#     def __init__(self, name, pos, proj, sal):
+#         self.name = name
+#         self.pos = pos
+#         self.proj = proj
+#         self.sal = sal
 
-    def __init__(self, name, pos, proj, sal):
-        self.name = name
-        self.pos = pos
-        self.proj = proj
-        self.sal = sal
+POSLIST = ["QB", "WR", 'R', 'K', 'D', 'F', "TE"]
 
 def send_request():
     # Request
@@ -98,7 +131,7 @@ def send_request():
             }
         )
 
-        with open('test.txt', 'w', encoding = 'utf-8') as File:
+        with open('players.json', 'w', encoding = 'utf-8') as File:
             json.dump(format(response.content), File)
 
     except requests.exceptions.RequestException:
@@ -108,17 +141,35 @@ def send_request():
 calculate player projected point
 Create weighted average of yards per game and multiply by points per yard
     Points per yard are created as Constants
-players: list of every player objects
+freeAgents: list of every player not in a lineUp
 """
-def calcProjection(players):
-    for player in players:
+def calcProjection(freeAgents):
+    #TODO: Does not include defensive stats
+    for player in freeAgents:
         for game in player.games:
             count += 1
-            tmpCount += 1
+
+        tmpCount = count
         for game in player.games:
-            total = (1 + (tmpCount/200)) * (game.passingyards * PPPY + game.rushingyards * PPRY + game.receivingyards * PPRecY + game.kickingyards * PPKY + game.td * PPTD + game.receptions * PPR)
+            total = (1 + (tmpCount/200)) * (game.passingyards * PPPY + game.rushingyards * PPRY + game.receivingyards *
+                                            PPRecY + game.kickingyards * PPKY + game.td * PPTD + game.receptions * PPR)
             tmpCount -= 2
         player.proj = (total/count)
+
+"""
+createLineup(freeAgents)
+    for all positions
+        choice = findMax(players, position)
+        lineup += choice
+        players.remove(choice)
+"""
+def createLineup(freeAgents):
+    lineup = []
+    for position in POSLIST:
+        choice = findMax(freeAgents, position)
+        lineup += choice
+        freeAgents.delete(choice)
+    return lineup
 
 """
 find the player with the max projected points
@@ -144,6 +195,70 @@ def findMax(playerList, pos):
 
     return tmp
 
+"""
+Remove players from the freeAgent list with >= salary compared to current lineup selections
+pos: position of current player in lineup
+salary: salary of current player in lineup
+"""
+def trimPool(pos,salary):
+    for player in freeAgents:
+        if player.position == pos:
+            if player.salary >= salary:
+                freeAgents.remove(player)
+
+"""
+Find the player (in the same position) with minimum difference in projected points between the two lineups
+lineup1: current lineup
+lineup2: second highest point total lineup
+"""
+def findMinDif(lineup1, lineup2):
+    holder = lineup1[0].projection
+    for p in lineup1:
+        for p2 in lineup2:
+            if p.position == p2.position & (p.projection - p2.projection) < holder:
+                print("hi")
+
+
+def swap(p1, p2, lineup1, lineup2):
+    print(1)
+
+def updateLine(lineup, pos):
+    print(2)
+
 send_request()
 
-print(4)
+print("Started Reading JSON file")
+with open("players.json") as json_file:
+    print("Converting JSON encoded data into Python dictionary")
+    player = json.load(json_file)
+    print("Type: ", type(player))
+
+    print("Decoded JSON Data From File")
+    for x in range(10):
+        print(player[x])
+
+    print("Done reading json file")
+
+freeAgents = calcProjection()
+
+lineup = createLineup(freeAgents)
+for p in lineup:
+    trimPool(p.position, p.salary)
+
+totalSal = 0
+for p in lineup:
+    totalSal += p.salary
+
+if totalSal > salCap:
+    lineup1 = createLineup(freeAgents)
+else:
+    print (lineUp)
+    quit()
+
+while totalSal > salCap:
+    holder = findMinDif(lineup, lineup1)
+    swap(holder[0], holder[1], lineup, lineup1)
+    updateLine(lineup1, holder[0].pos)
+
+print(lineup)
+quit()
